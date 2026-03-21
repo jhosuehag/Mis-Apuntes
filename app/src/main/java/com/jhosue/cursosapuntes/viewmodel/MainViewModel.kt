@@ -60,4 +60,19 @@ class MainViewModel @Inject constructor(
             repository.updateSections(updated)
         }
     }
+
+    fun moveSection(from: Int, to: Int) {
+        val currentList = _sections.value.toMutableList()
+        if (from in currentList.indices && to in currentList.indices) {
+            val item = currentList.removeAt(from)
+            currentList.add(to, item)
+            val updated = currentList.mapIndexed { index, section ->
+                section.copy(position = index)
+            }
+            _sections.value = updated
+            viewModelScope.launch {
+                repository.updateSections(updated)
+            }
+        }
+    }
 }

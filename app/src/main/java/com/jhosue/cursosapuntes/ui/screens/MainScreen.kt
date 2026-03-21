@@ -1,25 +1,23 @@
 package com.jhosue.cursosapuntes.ui.screens
 
-import androidx.compose.animation.core.animateFloatAsState
+import android.app.Activity
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.zIndex
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.NavigateNext
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -34,17 +32,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
-import android.app.Activity
-import android.widget.Toast
-import androidx.activity.compose.BackHandler
-import kotlinx.coroutines.delay
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.zIndex
+import androidx.activity.compose.BackHandler
 import com.jhosue.cursosapuntes.data.model.Section
 import com.jhosue.cursosapuntes.ui.components.CreateSectionModal
 import com.jhosue.cursosapuntes.ui.components.DeleteConfirmationDialog
@@ -68,27 +68,28 @@ fun MainScreen(
     var isSelectionModeActive by remember { mutableStateOf(false) }
     var showMultipleDeleteDialog by remember { mutableStateOf(false) }
 
-    var backPressedOnce by remember { mutableStateOf(false) }
+    val lazyListState = rememberLazyListState()
     val context = LocalContext.current
+    var backPressedTime by remember { mutableLongStateOf(0L) }
+
+    var draggingItemIndex by remember { mutableIntStateOf(-1) }
+    var draggingOffsetY by remember { mutableFloatStateOf(0f) }
+    var currentDragTargetIndex by remember { mutableIntStateOf(-1) }
+    val itemPositions = remember { mutableStateMapOf<Int, Float>() }
+    var itemSizes = remember { mutableStateMapOf<Int, Int>() }
 
     BackHandler {
         if (isSelectionModeActive) {
             selectedSections = emptySet()
             isSelectionModeActive = false
         } else {
-            if (backPressedOnce) {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - backPressedTime < 2000) {
                 (context as? Activity)?.finish()
             } else {
-                backPressedOnce = true
+                backPressedTime = currentTime
                 Toast.makeText(context, "Presiona de nuevo para salir", Toast.LENGTH_SHORT).show()
             }
-        }
-    }
-
-    LaunchedEffect(backPressedOnce) {
-        if (backPressedOnce) {
-            delay(2000L)
-            backPressedOnce = false
         }
     }
 
@@ -111,14 +112,70 @@ fun MainScreen(
             it.name.contains(searchQuery, ignoreCase = true)
         }
 
-        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-
         LazyColumn(
-            state = listState,
+            state = lazyListState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .pointerInput(Unit) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { offset ->
+                            val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+                            for (item in visibleItems) {
+                                val itemTop = itemPositions[item.index] ?: 0f
+                                val itemSize = itemSizes[item.index] ?: 0
+                                if (offset.y >= itemTop && offset.y <= itemTop + itemSize) {
+                                    draggingItemIndex = item.index
+                                    currentDragTargetIndex = item.index
+                                    draggingOffsetY = 0f
+                                    break
+                                }
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            if (draggingItemIndex != -1) {
+                                change.consume()
+                                draggingOffsetY += dragAmount.y
+
+                                val currentY = (itemPositions[draggingItemIndex] ?: 0f) + draggingOffsetY
+                                val visibleItems = lazyListState.layoutInfo.visibleItemsInfo
+
+                                var newTarget = currentDragTargetIndex
+                                for (item in visibleItems) {
+                                    val itemTop = itemPositions[item.index] ?: 0f
+                                    val itemBottom = itemTop + (itemSizes[item.index] ?: 0)
+                                    if (item.index != draggingItemIndex) {
+                                        val itemCenter = itemTop + (itemSizes[item.index] ?: 0) / 2
+                                        if (currentY < itemCenter && draggingOffsetY < 0) {
+                                            newTarget = item.index
+                                            break
+                                        } else if (currentY > itemCenter && draggingOffsetY > 0) {
+                                            newTarget = item.index
+                                        }
+                                    }
+                                }
+
+                                if (newTarget != currentDragTargetIndex && newTarget != -1) {
+                                    currentDragTargetIndex = newTarget
+                                    viewModel.moveSection(draggingItemIndex, newTarget)
+                                    draggingItemIndex = newTarget
+                                    draggingOffsetY = 0f
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            draggingItemIndex = -1
+                            currentDragTargetIndex = -1
+                            draggingOffsetY = 0f
+                        },
+                        onDragCancel = {
+                            draggingItemIndex = -1
+                            currentDragTargetIndex = -1
+                            draggingOffsetY = 0f
+                        }
+                    )
+                },
             contentPadding = PaddingValues(top = 48.dp, bottom = 80.dp)
         ) {
             item {
@@ -238,17 +295,17 @@ fun MainScreen(
                 }
             }
             
-            items(filteredSections, key = { it.id }) { section ->
+            itemsIndexed(filteredSections, key = { _, section -> section.id }) { index, section ->
                 val isSelected = selectedSections.contains(section.id)
-                val isSelectionMode = isSelectionModeActive
+                val isDragging = draggingItemIndex == index
 
                 SectionItem(
                     section = section,
                     isSelected = isSelected,
-                    isSelectionMode = isSelectionMode,
-                    dragHandleModifier = Modifier, // Restored plain modifier
+                    isDragging = isDragging,
+                    dragOffset = if (isDragging) draggingOffsetY else 0f,
                     onClick = { 
-                        if (isSelectionMode) {
+                        if (isSelectionModeActive) {
                             val newSelection = if (isSelected) selectedSections - section.id else selectedSections + section.id
                             selectedSections = newSelection
                             if (newSelection.isEmpty()) isSelectionModeActive = false
@@ -263,7 +320,11 @@ fun MainScreen(
                         }
                     },
                     onEdit = { sectionToEdit = section },
-                    onDelete = { sectionToDelete = section }
+                    onDelete = { sectionToDelete = section },
+                    onPositioned = { offset, size ->
+                        itemPositions[index] = offset
+                        itemSizes[index] = size
+                    }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -376,14 +437,16 @@ fun MainScreen(
 fun SectionItem(
     section: Section,
     isSelected: Boolean,
-    isSelectionMode: Boolean,
-    dragHandleModifier: Modifier = Modifier,
+    isDragging: Boolean,
+    dragOffset: Float,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onPositioned: (offset: Float, size: Int) -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var cardHeight by remember { mutableFloatStateOf(0f) }
 
     val scale by animateFloatAsState(
         targetValue = if (showMenu) 0.97f else 1f,
@@ -394,6 +457,16 @@ fun SectionItem(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                translationY = dragOffset
+            }
+            .onGloballyPositioned { coordinates ->
+                val position = coordinates.positionInRoot().y
+                val size = coordinates.size.height
+                cardHeight = position
+                onPositioned(position, size)
+            }
     ) {
         Card(
             modifier = Modifier
@@ -401,9 +474,7 @@ fun SectionItem(
                 .scale(scale)
                 .combinedClickable(
                     onClick = { onClick() },
-                    onLongClick = { 
-                        if (!isSelectionMode) onLongClick()
-                    }
+                    onLongClick = { onLongClick() }
                 ),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(
@@ -414,7 +485,7 @@ fun SectionItem(
                 }
             ),
             border = if (isSelected) BorderStroke(2.dp, Color(0xFF2563EB)) else null,
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp, pressedElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isDragging) 8.dp else 2.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -422,18 +493,6 @@ fun SectionItem(
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (!isSelectionMode) {
-                    Box(modifier = dragHandleModifier) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Reordenar",
-                            tint = Color.LightGray,
-                            modifier = Modifier
-                                .padding(end = 12.dp)
-                                .size(20.dp)
-                        )
-                    }
-                }
                 Box(
                     modifier = Modifier
                         .size(56.dp)
@@ -469,12 +528,15 @@ fun SectionItem(
                         tint = Color(0xFF2563EB),
                         modifier = Modifier.size(24.dp)
                     )
-                } else if (!isSelectionMode) {
+                } else {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
                             .pointerInput(Unit) {
-                                detectTapGestures(onTap = { showMenu = true })
+                                detectTapGestures(
+                                    onTap = { showMenu = true },
+                                    onLongPress = { onLongClick() }
+                                )
                             }
                     ) {
                         Icon(
@@ -483,8 +545,6 @@ fun SectionItem(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                } else {
-                    Spacer(modifier = Modifier.size(24.dp))
                 }
             }
         }

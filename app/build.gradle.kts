@@ -69,7 +69,7 @@ dependencies {
     
     // Gson for Backup
     implementation(libs.gson)
-    
+
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

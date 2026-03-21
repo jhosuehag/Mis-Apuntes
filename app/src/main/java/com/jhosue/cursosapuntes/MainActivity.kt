@@ -1,7 +1,7 @@
 package com.jhosue.cursosapuntes
 
-import android.os.Bundle
 import android.content.SharedPreferences
+import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,7 +28,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             var darkMode by remember { mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) }
 
-            // Escuchar cambios en las preferencias
             LaunchedEffect(Unit) {
                 sharedPreferences.registerOnSharedPreferenceChangeListener { _, key ->
                     if (key == "dark_mode") {

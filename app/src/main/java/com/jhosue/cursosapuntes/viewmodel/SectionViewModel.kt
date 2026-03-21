@@ -83,4 +83,19 @@ class SectionViewModel @Inject constructor(
             repository.updateNotes(updated)
         }
     }
+
+    fun moveNote(from: Int, to: Int) {
+        val currentList = _allNotes.value.toMutableList()
+        if (from in currentList.indices && to in currentList.indices) {
+            val item = currentList.removeAt(from)
+            currentList.add(to, item)
+            val updated = currentList.mapIndexed { index, note ->
+                note.copy(position = index)
+            }
+            _allNotes.value = updated
+            viewModelScope.launch {
+                repository.updateNotes(updated)
+            }
+        }
+    }
 }
