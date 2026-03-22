@@ -25,13 +25,13 @@ interface SectionDao {
     suspend fun insertSections(sections: List<Section>)
 
     @Query("UPDATE sections SET noteCount = noteCount + 1 WHERE id = :sectionId")
-    fun incrementNoteCount(sectionId: String): Int
+    suspend fun incrementNoteCount(sectionId: String)
 
     @Query("UPDATE sections SET name = :name WHERE id = :sectionId")
-    fun updateSectionName(sectionId: String, name: String)
+    suspend fun updateSectionName(sectionId: String, name: String)
 
     @Query("UPDATE sections SET noteCount = :noteCount WHERE id = :sectionId")
-    fun updateNoteCount(sectionId: String, noteCount: Int)
+    suspend fun updateNoteCount(sectionId: String, noteCount: Int)
 
     @Query("DELETE FROM sections WHERE id = :sectionId")
     suspend fun deleteSection(sectionId: String)
@@ -40,5 +40,5 @@ interface SectionDao {
     suspend fun deleteAllSections()
 
     @Query("UPDATE sections SET noteCount = noteCount - 1 WHERE id = :sectionId AND noteCount > 0")
-    fun decrementNoteCount(sectionId: String)
+    suspend fun decrementNoteCount(sectionId: String)
 }

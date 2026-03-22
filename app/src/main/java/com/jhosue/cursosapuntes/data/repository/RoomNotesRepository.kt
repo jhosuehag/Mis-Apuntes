@@ -32,18 +32,19 @@ class RoomNotesRepository @Inject constructor(
         return noteDao.getNoteById(noteId)
     }
 
-    override suspend fun addSection(name: String) {
+    override suspend fun addSection(name: String, position: Int) {
         withContext(Dispatchers.IO) {
             val section = Section(
                 id = UUID.randomUUID().toString(),
                 name = name,
-                noteCount = 0
+                noteCount = 0,
+                position = position
             )
             sectionDao.insertSection(section)
         }
     }
 
-    override suspend fun addNote(sectionId: String, function: String, usedFor: String, example: String) {
+    override suspend fun addNote(sectionId: String, function: String, usedFor: String, example: String, position: Int) {
         withContext(Dispatchers.IO) {
             val typeId = if (example.isBlank()) "Theory" else "Algorithm"
             val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
@@ -56,7 +57,8 @@ class RoomNotesRepository @Inject constructor(
                 date = dateString,
                 type = typeId,
                 description = usedFor,
-                exampleCode = example.takeIf { it.isNotBlank() }
+                exampleCode = example.takeIf { it.isNotBlank() },
+                position = position
             )
             
             noteDao.insertNote(note)

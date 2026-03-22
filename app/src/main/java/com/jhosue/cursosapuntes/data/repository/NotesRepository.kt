@@ -13,8 +13,8 @@ interface NotesRepository {
     fun getSections(): Flow<List<Section>>
     fun getNotes(sectionId: String): Flow<List<Note>>
     fun getNote(noteId: String): Flow<Note?>
-    suspend fun addSection(name: String)
-    suspend fun addNote(sectionId: String, function: String, usedFor: String, example: String)
+    suspend fun addSection(name: String, position: Int)
+    suspend fun addNote(sectionId: String, function: String, usedFor: String, example: String, position: Int)
     suspend fun updateSection(section: Section)
     suspend fun deleteSection(sectionId: String)
     suspend fun updateNote(note: Note)
@@ -29,15 +29,15 @@ interface NotesRepository {
 @Singleton
 class MockNotesRepository @Inject constructor() : NotesRepository {
     private val _sections = MutableStateFlow<List<Section>>(listOf(
-        Section("1", "Data Structures", 5),
-        Section("2", "Web Development", 3),
-        Section("3", "Computer Networks", 2)
+        Section("1", "Data Structures", 5, 0),
+        Section("2", "Web Development", 3, 1),
+        Section("3", "Computer Networks", 2, 2)
     ))
 
     private val _notes = MutableStateFlow<List<Note>>(listOf(
-        Note("1", "1", "Arrays & Linked Lists", "Mar 3", "Theory", "Almacenar colecciones de elementos en memoria de forma secuencial o enlazada.", "// Array en JavaScript\nconst arr = [10, 20, 30, 40];\nconsole.log(arr[2]); // 30"),
-        Note("2", "1", "Binary Search Trees", "Mar 2", "Algorithm", "BST property: left child < parent < right child...", null),
-        Note("3", "1", "Hash Tables", "Feb 28", "Theory", "Hash functions map keys to indices in an array...", null)
+        Note("1", "1", "Arrays & Linked Lists", "Mar 3", "Theory", "Almacenar colecciones de elementos en memoria de forma secuencial o enlazada.", exampleCode = "// Array en JavaScript\nconst arr = [10, 20, 30, 40];\nconsole.log(arr[2]); // 30", position = 0),
+        Note("2", "1", "Binary Search Trees", "Mar 2", "Algorithm", "BST property: left child < parent < right child...", position = 1),
+        Note("3", "1", "Hash Tables", "Feb 28", "Theory", "Hash functions map keys to indices in an array...", position = 2)
     ))
 
     override fun getSections(): Flow<List<Section>> = _sections
@@ -50,16 +50,16 @@ class MockNotesRepository @Inject constructor() : NotesRepository {
         list.find { it.id == noteId }
     }
 
-    override suspend fun addSection(name: String) {
+    override suspend fun addSection(name: String, position: Int) {
         val currentLists = _sections.value.toMutableList()
-        currentLists.add(Section(UUID.randomUUID().toString(), name, 0))
+        currentLists.add(Section(UUID.randomUUID().toString(), name, 0, position))
         _sections.value = currentLists
     }
 
-    override suspend fun addNote(sectionId: String, function: String, usedFor: String, example: String) {
+    override suspend fun addNote(sectionId: String, function: String, usedFor: String, example: String, position: Int) {
         val currentNotes = _notes.value.toMutableList()
         val typeId = if (example.isBlank()) "Theory" else "Algorithm"
-        currentNotes.add(Note(UUID.randomUUID().toString(), sectionId, function, "Today", typeId, usedFor, example.takeIf { it.isNotBlank() }))
+        currentNotes.add(Note(id = UUID.randomUUID().toString(), sectionId = sectionId, title = function, date = "Today", type = typeId, description = usedFor, exampleCode = example.takeIf { it.isNotBlank() }, position = position))
         _notes.value = currentNotes
         
         val sectionList = _sections.value.toMutableList()

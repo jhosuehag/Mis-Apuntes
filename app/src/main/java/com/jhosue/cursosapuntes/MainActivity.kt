@@ -1,6 +1,5 @@
 package com.jhosue.cursosapuntes
 
-import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,15 +16,12 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private lateinit var sharedPreferences: SharedPreferences
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        sharedPreferences = getSharedPreferences("settings", MODE_PRIVATE)
-        
         enableEdgeToEdge()
         setContent {
+            val sharedPreferences = remember { getSharedPreferences("settings", MODE_PRIVATE) }
             var darkMode by remember { mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) }
 
             LaunchedEffect(Unit) {

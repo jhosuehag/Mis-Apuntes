@@ -52,7 +52,7 @@ class SectionViewModel @Inject constructor(
 
     fun addNote(function: String, usedFor: String, example: String) {
         viewModelScope.launch {
-            repository.addNote(sectionId, function, usedFor, example)
+            repository.addNote(sectionId, function, usedFor, example, _allNotes.value.size)
         }
     }
 
