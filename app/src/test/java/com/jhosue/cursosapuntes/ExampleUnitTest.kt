@@ -1,4 +1,4 @@
-package com.jhosue.cursosapuntes
+package com.jhosue.apuntes
 
 import org.junit.Test
 

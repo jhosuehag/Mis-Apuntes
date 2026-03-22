@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.jhosue.cursosapuntes"
+    namespace = "com.jhosue.apuntes"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -14,7 +14,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.jhosue.cursosapuntes"
+        applicationId = "com.jhosue.apuntes"
         minSdk = 30
         targetSdk = 36
         versionCode = 1
