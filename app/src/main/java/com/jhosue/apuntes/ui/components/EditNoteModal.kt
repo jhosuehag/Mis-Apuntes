@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,7 +63,18 @@ fun EditNoteModal(
     onDismissRequest: () -> Unit,
     onSave: (title: String, description: String, example: String) -> Unit
 ) {
-    var functionName by remember { mutableStateOf(currentTitle) }
+    // All three fields use TextFieldValue so the cursor is placed at the end of the
+    // existing text when the field receives focus (programmatic or via the arrow button).
+    // Using a plain String would leave the cursor at position 0 on focus, which is
+    // confusing when editing an existing note.
+    var functionName by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = currentTitle,
+                selection = TextRange(currentTitle.length)
+            )
+        )
+    }
     var usedForDescription by remember {
         mutableStateOf(
             TextFieldValue(
@@ -70,7 +83,15 @@ fun EditNoteModal(
             )
         )
     }
-    var exampleCode by remember { mutableStateOf(currentExample ?: "") }
+    val currentExampleText = currentExample ?: ""
+    var exampleCode by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = currentExampleText,
+                selection = TextRange(currentExampleText.length)
+            )
+        )
+    }
 
     // skipPartiallyExpanded = true ensures the sheet always opens fully expanded,
     // which prevents the double-animation jump that would occur when tapping a field.
@@ -220,7 +241,30 @@ fun EditNoteModal(
                         .height(120.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // ── Arrow button: jump focus to Example ──────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = { focusManager.moveFocus(FocusDirection.Down) },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.size(width = 44.dp, height = 36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Move to Example field",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     "Example",
@@ -258,8 +302,8 @@ fun EditNoteModal(
 
             // ── Save button ───────────────────────────────────────────────────
             Button(
-                onClick = { onSave(functionName, usedForDescription.text, exampleCode) },
-                enabled = functionName.isNotBlank() && usedForDescription.text.isNotBlank(),
+                onClick = { onSave(functionName.text, usedForDescription.text, exampleCode.text) },
+                enabled = functionName.text.isNotBlank() && usedForDescription.text.isNotBlank(),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
