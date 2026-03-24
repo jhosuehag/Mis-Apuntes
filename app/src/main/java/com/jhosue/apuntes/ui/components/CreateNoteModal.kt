@@ -66,6 +66,7 @@ import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -123,6 +124,15 @@ fun CreateNoteModal(
                 }
                 previous = current
             }
+    }
+
+    // Fallback: when cycling to Example (index 2), bring it into view
+    // after a short delay to ensure the keyboard is visible.
+    LaunchedEffect(currentFocusIndex) {
+        if (currentFocusIndex == 2) {
+            delay(100)
+            exampleBIVR.bringIntoView()
+        }
     }
 
     Dialog(
